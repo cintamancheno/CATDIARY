@@ -12,7 +12,7 @@ h1{font-size:20px}h2{font-size:17px;margin:16px 0 6px}
 button{font:inherit;padding:10px 14px;border-radius:8px;border:1px solid var(--ac);background:var(--ac);color:#fff;margin:3px}
 button.s{background:none;color:var(--ac)}
 input,select,textarea{font:inherit;width:100%;padding:9px;margin:2px 0 8px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--fg)}
-label{font-size:13px;color:var(--mu)}.t{display:flex;gap:4px}.t button{flex:1;margin:0}
+label{font-size:13px;color:var(--mu)}.t{display:flex;gap:4px}.t button{flex:1;margin:0;padding:10px 4px;font-size:15px}
 .m{color:var(--mu);font-size:13px}.e{color:#c0392b}table{width:100%;border-collapse:collapse}td{padding:4px;border-bottom:1px solid var(--bd);font-size:14px}
 svg{width:100%;height:auto}
 </style></head><body>
@@ -39,18 +39,19 @@ const $=s=>document.querySelector(s), app=$("#app");
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const iso=d=>{const z=new Date(d);return z.getFullYear()+"-"+String(z.getMonth()+1).padStart(2,"0")+"-"+String(z.getDate()).padStart(2,"0")};
 const hoy=()=>iso(new Date());
-let db=null, sesion=false, datos=[], quien=localStorage.getItem("quien"), vista="hoy", tipo="comida", msg="";
+let db=null, sesion=false, alimentos=[], editId=null, datos=[], quien=localStorage.getItem("quien"), vista="hoy", tipo="comida", msg="";
 const lbl=(k)=>k[3]||(k[1]=="text"||k[1]=="num"||k[1]=="area"?k[2]:k[0]);
 
 function login(){
  app.innerHTML=`<div class="c"><h2>Entrar al diario</h2><label>Email familiar</label><input id="em" type="email" autocomplete="username"><label>Contraseña</label><input id="pw" type="password" autocomplete="current-password"><button id="en">Entrar</button>${msg?`<div class="e">${esc(msg)}</div>`:""}</div>`;
  $("#en").onclick=async()=>{const {error}=await db.auth.signInWithPassword({email:$("#em").value.trim(),password:$("#pw").value});if(error){msg="No se pudo entrar: "+error.message;login();return}msg="";sesion=true;await cargar()};
 }
-async function cargar(){
+async function cargar(f){
  if(!db||!sesion) return;
  const {data,error}=await db.from("entradas").select("*");
  if(error){msg="Error al cargar: "+error.message;} else {datos=data.sort((a,b)=>(a.fecha+a.created_at).localeCompare(b.fecha+b.created_at));msg="";}
- if(vista!="reg") pintar();
+ const r2=await db.from("alimentos").select("*");if(!r2.error)alimentos=r2.data;
+ if(f||(vista!="reg"&&vista!="ali")) pintar();
 }
 function pintar(){
  if(SUPABASE_URL.startsWith("PEGA")){app.innerHTML='<div class="c e">Falta configurar SUPABASE_URL y SUPABASE_KEY al inicio del archivo.</div>';return;}
@@ -58,15 +59,49 @@ function pintar(){
  if(!quien){app.innerHTML='<div class="c"><h2>¿Quién eres?</h2>'+NOMBRES.map((n,i)=>`<button data-n="${i}">${esc(n)}</button>`).join("")+"</div>";
   app.querySelectorAll("[data-n]").forEach(b=>b.onclick=()=>{quien=NOMBRES[b.dataset.n];localStorage.setItem("quien",quien);pintar()});return;}
  app.innerHTML=`<div class="m">Registrando como <b>${esc(quien)}</b> · <a href="#" id="cam">cambiar</a> · <a href="#" id="sal">cerrar sesión</a></div>
- <div class="t" style="margin:8px 0"><button class="${vista=="hoy"?"":"s"}" data-v="hoy">Hoy</button><button class="${vista=="reg"?"":"s"}" data-v="reg">Registrar</button><button class="${vista=="sem"?"":"s"}" data-v="sem">Semana</button></div>
+ <div class="t" style="margin:8px 0"><button class="${vista=="hoy"?"":"s"}" data-v="hoy">Hoy</button><button class="${vista=="reg"?"":"s"}" data-v="reg">Registrar</button><button class="${vista=="ali"?"":"s"}" data-v="ali">Alimentos</button><button class="${vista=="sem"?"":"s"}" data-v="sem">Semana</button></div>
  ${msg?`<div class="e">${esc(msg)}</div>`:""}<div id="v"></div>`;
  $("#cam").onclick=e=>{e.preventDefault();quien=null;localStorage.removeItem("quien");pintar()};
  app.querySelectorAll("[data-v]").forEach(b=>b.onclick=()=>{vista=b.dataset.v;pintar()});
  $("#sal").onclick=async e=>{e.preventDefault();await db.auth.signOut();sesion=false;datos=[];pintar()};
- ({hoy:vHoy,reg:vReg,sem:vSem})[vista]();
+ ({hoy:vHoy,reg:vReg,ali:vAli,sem:vSem})[vista]();
+}
+function dAdd(n){const d=new Date();d.setDate(d.getDate()+n);return iso(d)}
+function estadoAli(a){const h=hoy();
+ if(a.fecha_fin&&a.fecha_fin<h)return "Finalizado ("+a.fecha_fin+")";
+ if(a.fecha_inicio>h)return "Empieza el "+a.fecha_inicio;
+ return a.fecha_inicio>=dAdd(-14)?"Reciente · Últimas dos semanas":"Habitual"}
+function selAlim(){const act=alimentos.filter(a=>!(a.fecha_fin&&a.fecha_fin<hoy()));
+ return `<label>Producto guardado</label><select id="alim"><option value="">Otro / escribir a mano</option>${act.map(a=>`<option value="${a.id}">${esc(a.marca)} · ${esc(a.nombre)}</option>`).join("")}</select>`}
+function vAli(){
+ const e=alimentos.find(a=>a.id==editId)||{};
+ const ord=[...alimentos].sort((a,b)=>(b.fecha_inicio||"").localeCompare(a.fecha_inicio||""));
+ $("#v").innerHTML=`<div class="c"><h2>${editId?"Editar producto":"Nuevo producto"}</h2>
+ <label>Marca</label><input id="a_marca" value="${esc(e.marca)}">
+ <label>Nombre comercial</label><input id="a_nombre" value="${esc(e.nombre)}">
+ <label>Tipo de alimento</label><select id="a_tipo">${["Húmeda","Pienso","Premio","Suplemento","Otro"].map(o=>`<option${e.tipo==o?" selected":""}>${o}</option>`).join("")}</select>
+ <label>Ingredientes completos (como en la etiqueta)</label><textarea id="a_ing" rows="4">${esc(e.ingredientes)}</textarea>
+ <label>Fuentes de proteína animal (separadas por comas)</label><input id="a_prot" value="${esc(e.proteinas)}">
+ <label>Fecha de inicio de uso</label><input id="a_ini" type="date" value="${esc(e.fecha_inicio||hoy())}">
+ <label>Fecha de fin de uso (vacía si sigue en uso)</label><input id="a_fin" type="date" value="${esc(e.fecha_fin||"")}">
+ <button id="a_gd">${editId?"Guardar cambios":"Guardar producto"}</button>${editId?'<button class="s" id="a_cn">Cancelar</button>':""}</div>
+ <h2>Productos guardados</h2>`+(ord.length?ord.map(a=>`<div class="c"><b>${esc(a.marca)} · ${esc(a.nombre)}</b> <span class="m">(${esc(a.tipo)})</span><br><span class="m">${esc(estadoAli(a))} · desde ${esc(a.fecha_inicio)}</span>
+ ${a.proteinas?`<div>Proteína animal: ${esc(a.proteinas)}</div>`:""}${a.ingredientes?`<details><summary class="m">Ingredientes</summary>${esc(a.ingredientes)}</details>`:""}
+ <button class="s" data-e="${a.id}">Editar</button>${!a.fecha_fin?`<button class="s" data-f="${a.id}">Dejar de usar (hoy)</button>`:""}</div>`).join(""):'<div class="c m">Aún no hay productos guardados.</div>');
+ $("#a_gd").onclick=async()=>{
+  const r={marca:$("#a_marca").value.trim(),nombre:$("#a_nombre").value.trim(),tipo:$("#a_tipo").value,ingredientes:$("#a_ing").value.trim(),proteinas:$("#a_prot").value.trim(),fecha_inicio:$("#a_ini").value,fecha_fin:$("#a_fin").value||null};
+  if((!r.marca&&!r.nombre)||!r.fecha_inicio){alert("Indica al menos la marca o el nombre, y la fecha de inicio.");return}
+  const q=editId?db.from("alimentos").update(r).eq("id",editId):db.from("alimentos").insert({...r,autor:quien});
+  const {error}=await q;
+  if(error){alert("No se pudo guardar el producto: "+error.message);return}
+  editId=null;msg="";await cargar(true);
+ };
+ if($("#a_cn"))$("#a_cn").onclick=()=>{editId=null;vAli()};
+ app.querySelectorAll("[data-e]").forEach(b=>b.onclick=()=>{editId=Number(b.dataset.e);vAli();window.scrollTo(0,0)});
+ app.querySelectorAll("[data-f]").forEach(b=>b.onclick=async()=>{if(!confirm("¿Marcar este producto como finalizado hoy?"))return;const {error}=await db.from("alimentos").update({fecha_fin:hoy()}).eq("id",Number(b.dataset.f));if(error){alert("No se pudo actualizar: "+error.message);return}await cargar(true)});
 }
 function vis(f,v){if(f&&f[1]=="sel"){const o=f[2].find(o=>Array.isArray(o)&&o[0]==v);if(o)return o[1]}return v}
-function resumenEntrada(e){const d=e.datos||{};return Object.entries(d).filter(([k,v])=>v!==""&&v!=null).map(([k,v])=>{const f=CAMPOS[e.tipo].f.find(x=>x[0]==k);return (f?lbl(f):k)+": "+vis(f,v)}).join(" · ")}
+function resumenEntrada(e){const d=e.datos||{};return Object.entries(d).filter(([k,v])=>v!==""&&v!=null&&k!="alimento_id").map(([k,v])=>{const f=CAMPOS[e.tipo].f.find(x=>x[0]==k);return (f?lbl(f):k)+": "+vis(f,v)}).join(" · ")}
 function vHoy(){
  const h=datos.filter(e=>e.fecha==hoy());
  $("#v").innerHTML=`<h2>Hoy (${hoy()})</h2>`+(h.length?`<div class="c"><table>${h.map(e=>`<tr><td><b>${CAMPOS[e.tipo].t}</b><br><span class="m">${esc(e.autor)} · ${esc(e.datos?.hora||"")}</span></td><td>${esc(resumenEntrada(e))}</td></tr>`).join("")}</table></div>`:'<div class="c m">Aún no hay registros hoy.</div>');
@@ -74,14 +109,17 @@ function vHoy(){
 function vReg(){
  $("#v").innerHTML=`<div class="c"><div class="t" style="flex-wrap:wrap">${Object.entries(CAMPOS).map(([k,c])=>`<button class="${k==tipo?"":"s"}" data-t="${k}">${c.t}</button>`).join("")}</div>
  <label>Fecha</label><input type="date" id="fecha" value="${hoy()}">
+ ${tipo=="comida"?selAlim():""}
  ${CAMPOS[tipo].f.map(f=>{const id="f_"+f[0],l=lbl(f);
   if(f[1]=="sel")return `<label>${esc(l)}</label><select id="${id}">${(f[2]).map(o=>Array.isArray(o)?`<option value="${esc(o[0])}">${esc(o[1])}</option>`:`<option>${esc(o)}</option>`).join("")}</select>`;
   if(f[1]=="area")return `<label>${esc(l)}</label><textarea id="${id}" rows="4"></textarea>`;
   const ty=f[1]=="num"?'number" step="any':f[1];return `<label>${esc(l)}</label><input id="${id}" type="${ty}" ${f[1]=="time"?`value="${new Date().toTimeString().slice(0,5)}"`:""}>`}).join("")}
  <button id="gd">Guardar</button></div>`;
  app.querySelectorAll("[data-t]").forEach(b=>b.onclick=()=>{tipo=b.dataset.t;vReg()});
+ if($("#alim"))$("#alim").onchange=()=>{const a=alimentos.find(x=>x.id==$("#alim").value);if(!a)return;$("#f_producto").value=((a.marca||"")+" "+(a.nombre||"")).trim();const c=$("#f_clase");c.value=[...c.options].some(o=>o.value==a.tipo)?a.tipo:"Otro"};
  $("#gd").onclick=async()=>{
   const d={};CAMPOS[tipo].f.forEach(f=>{let v=$("#f_"+f[0]).value;if(v==="")return;d[f[0]]=f[1]=="num"?Number(v):v});
+  if(tipo=="comida"&&$("#alim")&&$("#alim").value)d.alimento_id=Number($("#alim").value);
   if(!Object.keys(d).filter(k=>k!="hora").length){msg="Rellena al menos un campo.";pintar();return}
   const {error}=await db.from("entradas").insert({fecha:$("#fecha").value,autor:quien,tipo,datos:d});
   if(error){msg="No se pudo guardar: "+error.message;pintar();return}
@@ -105,6 +143,10 @@ function vSem(){
  const prodsSem=new Set(datos.filter(e=>e.tipo=="comida"&&e.fecha>=dias[0]).map(e=>e.datos?.producto).filter(Boolean));
  const prodsAnt=new Set(datos.filter(e=>e.tipo=="comida"&&e.fecha<dias[0]).map(e=>e.datos?.producto).filter(Boolean));
  const nuevos=[...prodsSem].filter(p=>!prodsAnt.has(p));
+ const mapA=Object.fromEntries(alimentos.map(a=>[a.id,a]));
+ const usados=[...new Set(datos.filter(e=>e.tipo=="comida"&&e.fecha>=dias[0]&&e.datos?.alimento_id).map(e=>e.datos.alimento_id))].map(id=>mapA[id]).filter(Boolean);
+ const prot=[...new Set(usados.flatMap(a=>(a.proteinas||"").split(",").map(x=>x.trim()).filter(Boolean)))];
+ const camb=alimentos.flatMap(a=>[(a.fecha_inicio>=dias[0]&&a.fecha_inicio<=dias[6])?"Inicio de "+a.marca+" "+a.nombre+" ("+a.fecha_inicio+")":null,(a.fecha_fin&&a.fecha_fin>=dias[0]&&a.fecha_fin<=dias[6])?"Fin de "+a.marca+" "+a.nombre+" ("+a.fecha_fin+")":null]).filter(Boolean);
  const meds=datos.filter(e=>e.tipo=="medicacion"&&e.fecha>=dias[0]&&e.datos?.cambio);
  const notas=datos.filter(e=>e.tipo=="nota"&&e.fecha>=dias[0]);
  const peores=R.map(r=>({...r,p:r.vom+(r.blanda?1:0)+(r.ap?1:0)+(r.alt?1:0)})).filter(r=>r.p>0).sort((a,b)=>b.p-a.p);
@@ -119,6 +161,8 @@ function vSem(){
  <tr><td>Días con apetito reducido</td><td>${R.filter(r=>r.ap).length}</td></tr>
  <tr><td>Días con estado general alterado</td><td>${R.filter(r=>r.alt).length}</td></tr>
  <tr><td>Productos nuevos esta semana</td><td>${nuevos.length?esc(nuevos.join(", ")):"ninguno"}</td></tr>
+ <tr><td>Proteínas animales (de productos guardados)</td><td>${prot.length?esc(prot.join(", ")):"—"}</td></tr>
+ <tr><td>Cambios de alimentación (inicios y fines de uso)</td><td>${camb.length?esc(camb.join("; ")):"ninguno"}</td></tr>
  <tr><td>Cambios de medicación</td><td>${meds.length?esc(meds.map(m=>m.fecha+": "+(m.datos.medicamento||"")+" "+m.datos.cambio).join("; ")):"ninguno"}</td></tr>
  <tr><td>Días peores (por nº de alteraciones)</td><td>${peores.length?peores.map(r=>r.d+" ("+r.p+")").join(", "):"ninguno"}</td></tr></table></div>
  <div class="c">${barras("Vómitos por día",R.map(r=>r.vom),lab,"#c0392b")}${barras("Heces: valor máximo del día (1-6)",R.map(r=>r.hm),lab,"#b9770e")}
