@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Diario IBD</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--bg:#fafaf7;--fg:#222;--card:#fff;--ac:#2f6f5e;--mu:#777;--bd:#ddd;--pat:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22200%22 viewBox=%220 0 200 200%22 fill=%22none%22 stroke=%22%232f6f5e%22 stroke-width=%221.4%22 stroke-linejoin=%22round%22 opacity=%220.22%22%3E%0A%3Cpath d=%22M28 14L31 25L42 28L31 31L28 42L25 31L14 28L25 25Z%22 fill=%22%232f6f5e%22 stroke=%22none%22/%3E%0A%3Cpath d=%22M150 70L152 77L159 79L152 81L150 88L148 81L141 79L148 77Z%22 fill=%22%232f6f5e%22 stroke=%22none%22/%3E%0A%3Ccircle cx=%22118%22 cy=%2226%22 r=%221.8%22 fill=%22%232f6f5e%22 stroke=%22none%22/%3E%3Ccircle cx=%2270%22 cy=%2296%22 r=%221.8%22 fill=%22%232f6f5e%22 stroke=%22none%22/%3E%3Ccircle cx=%22176%22 cy=%22150%22 r=%221.8%22 fill=%22%232f6f5e%22 stroke=%22none%22/%3E%3Ccircle cx=%2220%22 cy=%22120%22 r=%221.8%22 fill=%22%232f6f5e%22 stroke=%22none%22/%3E%0A%3Cpath d=%22M84 160L86 142L96 150Q104 148 112 150L122 142L124 160Q124 176 104 176Q84 176 84 160Z%22/%3E%0A%3Cpath d=%22M150 22L151 12L157 17Q161 16 165 17L171 12L172 22Q172 31 161 31Q150 31 150 22Z%22 transform=%22translate%28-4 4%29%22/%3E%0A%3C/svg%3E")}
+@media(prefers-color-scheme:dark){:root{--bg:#1b1c1b;--fg:#eee;--card:#262827;--ac:#6cc3a8;--mu:#aaa;--bd:#444;--pat:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22200%22 viewBox=%220 0 200 200%22 fill=%22none%22 stroke=%22%23ffffff%22 stroke-width=%221.4%22 stroke-linejoin=%22round%22 opacity=%220.22%22%3E%0A%3Cpath d=%22M28 14L31 25L42 28L31 31L28 42L25 31L14 28L25 25Z%22 fill=%22%23ffffff%22 stroke=%22none%22/%3E%0A%3Cpath d=%22M150 70L152 77L159 79L152 81L150 88L148 81L141 79L148 77Z%22 fill=%22%23ffffff%22 stroke=%22none%22/%3E%0A%3Ccircle cx=%22118%22 cy=%2226%22 r=%221.8%22 fill=%22%23ffffff%22 stroke=%22none%22/%3E%3Ccircle cx=%2270%22 cy=%2296%22 r=%221.8%22 fill=%22%23ffffff%22 stroke=%22none%22/%3E%3Ccircle cx=%22176%22 cy=%22150%22 r=%221.8%22 fill=%22%23ffffff%22 stroke=%22none%22/%3E%3Ccircle cx=%2220%22 cy=%22120%22 r=%221.8%22 fill=%22%23ffffff%22 stroke=%22none%22/%3E%0A%3Cpath d=%22M84 160L86 142L96 150Q104 148 112 150L122 142L124 160Q124 176 104 176Q84 176 84 160Z%22/%3E%0A%3Cpath d=%22M150 22L151 12L157 17Q161 16 165 17L171 12L172 22Q172 31 161 31Q150 31 150 22Z%22 transform=%22translate%28-4 4%29%22/%3E%0A%3C/svg%3E")}}
+*{box-sizing:border-box}body{margin:0;font:16px system-ui,sans-serif;background:var(--bg) var(--pat);color:var(--fg);padding:12px;max-width:640px;margin:auto}
+h1{font-size:20px}h2{font-size:17px;margin:16px 0 6px}
+.c{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:12px;margin:10px 0}
+button{font:inherit;padding:10px 14px;border-radius:8px;border:1px solid var(--ac);background:var(--ac);color:#fff;margin:3px}
+button.s{background:none;color:var(--ac)}
+input,select,textarea{font:inherit;width:100%;padding:9px;margin:2px 0 8px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--fg)}
+label{font-size:13px;color:var(--mu)}.t{display:flex;gap:4px}.t button{flex:1;margin:0}
+.m{color:var(--mu);font-size:13px}.e{color:#c0392b}table{width:100%;border-collapse:collapse}td{padding:4px;border-bottom:1px solid var(--bd);font-size:14px}
+svg{width:100%;height:auto}
+</style></head><body>
+<h1>🐱 Diario IBD</h1>
+<div id="app"></div>
+<script>
+// ===== CONFIGURACIÓN (rellenar) =====
+const SUPABASE_URL = "https://nysjyikjownvyeplqzsz.supabase.co";
+const SUPABASE_KEY = "sb_publishable_BVFoC4dWRpX6EOmKjZEmqg_T5pMlhs7";
+const NOMBRES = ["Abuela - Cinta V.", "Abuelo - Juan José M.", "Tío - Juan M.", "Mamá - Cinta M."];
+// ====================================
+
+const CAMPOS = {
+ comida:{t:"Comida",f:[["hora","time"],["producto","text","Marca, variedad y nombre exacto"],["clase","sel",["Húmeda","Pienso","Premio","Otro"]],["cantidad","text","Cantidad ofrecida (g o sobres)"],["comido","sel",["","Todo","Más de la mitad","Menos de la mitad","Nada"],"¿Cuánto se ha comido?"],["apetito","sel",["Normal","Menor de lo habitual","Mayor de lo habitual"]],["extras","text","Suplementos hipercalóricos"]]},
+ agua:{t:"Agua",f:[["hora","time"],["cantidad","text","ml o «bebió normal»"]]},
+ orina:{t:"Orina",f:[["hora","time"],["orina","sel",["","Normal","Más de lo habitual","Menos de lo habitual","Con esfuerzo o sin resultado"],"Orina"],["detalle","text","Detalle (cantidad, color, olor…)"]]},
+ sintomas:{t:"Síntomas",f:[["hora","time"],["vomitos","num","Nº de vómitos"],["aspecto_vomito","text","Aspecto del vómito"],["heces","sel",[["","— sin heces / no se sabe —"],["1","1 · Muy duras y secas"],["2","2 · Firmes, bien formadas"],["3","3 · Formadas, pero algo blandas"],["4","4 · Muy blandas, con poca forma"],["5","5 · Pastosas, sin forma definida"],["6","6 · Líquidas o acuosas"]],"Heces (consistencia)"],["moco_sangre","sel",["No","Moco","Sangre","Moco y sangre"],"Moco/sangre en heces"],["diarrea_episodios","num","Episodios de diarrea"],["nauseas","sel",["No","Sí"],"Náuseas aparentes"],["dolor","sel",["No","Sí"],"Dolor abdominal aparente"],["detalle","text","Detalle"]]},
+ estado:{t:"Estado",f:[["energia","sel",["Normal","Algo apagado","Muy decaído"],"Energía"],["comportamiento","sel",["Como siempre","Más escondido","Irritable","Inquieto"],"Comportamiento"],["actividad","sel",["Normal","Menor","Casi nula"],"Actividad"],["aseo","sel",["Como siempre","Menos","Nada"],"Aseo"]]},
+ medicacion:{t:"Medicación",f:[["medicamento","text","Nombre exacto"],["dosis","text","Dosis pautada"],["hora","time"],["administracion","sel",["Correcta","Difícil","No la tomó"],"Administración"],["vomito_despues","sel",["No","Sí","Sospecha de no retener"],"¿Vomitó después?"],["cambio","text","Inicio/retirada/cambio de pauta"]]},
+ peso:{t:"Peso",f:[["kg","num","Peso en kg (1 vez por semana)"]]},
+ nota:{t:"Nota",f:[["texto","area","Factores externos, estrés, dudas para el veterinario…"]]}
+};
+const $=s=>document.querySelector(s), app=$("#app");
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const iso=d=>{const z=new Date(d);return z.getFullYear()+"-"+String(z.getMonth()+1).padStart(2,"0")+"-"+String(z.getDate()).padStart(2,"0")};
+const hoy=()=>iso(new Date());
+let db=null, sesion=false, datos=[], quien=localStorage.getItem("quien"), vista="hoy", tipo="comida", msg="";
+const lbl=(k)=>k[3]||(k[1]=="text"||k[1]=="num"||k[1]=="area"?k[2]:k[0]);
+
+function login(){
+ app.innerHTML=`<div class="c"><h2>Entrar al diario</h2><label>Email familiar</label><input id="em" type="email" autocomplete="username"><label>Contraseña</label><input id="pw" type="password" autocomplete="current-password"><button id="en">Entrar</button>${msg?`<div class="e">${esc(msg)}</div>`:""}</div>`;
+ $("#en").onclick=async()=>{const {error}=await db.auth.signInWithPassword({email:$("#em").value.trim(),password:$("#pw").value});if(error){msg="No se pudo entrar: "+error.message;login();return}msg="";sesion=true;await cargar()};
+}
+async function cargar(){
+ if(!db||!sesion) return;
+ const {data,error}=await db.from("entradas").select("*");
+ if(error){msg="Error al cargar: "+error.message;} else {datos=data.sort((a,b)=>(a.fecha+a.created_at).localeCompare(b.fecha+b.created_at));msg="";}
+ if(vista!="reg") pintar();
+}
+function pintar(){
+ if(SUPABASE_URL.startsWith("PEGA")){app.innerHTML='<div class="c e">Falta configurar SUPABASE_URL y SUPABASE_KEY al inicio del archivo.</div>';return;}
+ if(!sesion){login();return}
+ if(!quien){app.innerHTML='<div class="c"><h2>¿Quién eres?</h2>'+NOMBRES.map((n,i)=>`<button data-n="${i}">${esc(n)}</button>`).join("")+"</div>";
+  app.querySelectorAll("[data-n]").forEach(b=>b.onclick=()=>{quien=NOMBRES[b.dataset.n];localStorage.setItem("quien",quien);pintar()});return;}
+ app.innerHTML=`<div class="m">Registrando como <b>${esc(quien)}</b> · <a href="#" id="cam">cambiar</a> · <a href="#" id="sal">cerrar sesión</a></div>
+ <div class="t" style="margin:8px 0"><button class="${vista=="hoy"?"":"s"}" data-v="hoy">Hoy</button><button class="${vista=="reg"?"":"s"}" data-v="reg">Registrar</button><button class="${vista=="sem"?"":"s"}" data-v="sem">Semana</button></div>
+ ${msg?`<div class="e">${esc(msg)}</div>`:""}<div id="v"></div>`;
+ $("#cam").onclick=e=>{e.preventDefault();quien=null;localStorage.removeItem("quien");pintar()};
+ app.querySelectorAll("[data-v]").forEach(b=>b.onclick=()=>{vista=b.dataset.v;pintar()});
+ $("#sal").onclick=async e=>{e.preventDefault();await db.auth.signOut();sesion=false;datos=[];pintar()};
+ ({hoy:vHoy,reg:vReg,sem:vSem})[vista]();
+}
+function vis(f,v){if(f&&f[1]=="sel"){const o=f[2].find(o=>Array.isArray(o)&&o[0]==v);if(o)return o[1]}return v}
+function resumenEntrada(e){const d=e.datos||{};return Object.entries(d).filter(([k,v])=>v!==""&&v!=null).map(([k,v])=>{const f=CAMPOS[e.tipo].f.find(x=>x[0]==k);return (f?lbl(f):k)+": "+vis(f,v)}).join(" · ")}
+function vHoy(){
+ const h=datos.filter(e=>e.fecha==hoy());
+ $("#v").innerHTML=`<h2>Hoy (${hoy()})</h2>`+(h.length?`<div class="c"><table>${h.map(e=>`<tr><td><b>${CAMPOS[e.tipo].t}</b><br><span class="m">${esc(e.autor)} · ${esc(e.datos?.hora||"")}</span></td><td>${esc(resumenEntrada(e))}</td></tr>`).join("")}</table></div>`:'<div class="c m">Aún no hay registros hoy.</div>');
+}
+function vReg(){
+ $("#v").innerHTML=`<div class="c"><div class="t" style="flex-wrap:wrap">${Object.entries(CAMPOS).map(([k,c])=>`<button class="${k==tipo?"":"s"}" data-t="${k}">${c.t}</button>`).join("")}</div>
+ <label>Fecha</label><input type="date" id="fecha" value="${hoy()}">
+ ${CAMPOS[tipo].f.map(f=>{const id="f_"+f[0],l=lbl(f);
+  if(f[1]=="sel")return `<label>${esc(l)}</label><select id="${id}">${(f[2]).map(o=>Array.isArray(o)?`<option value="${esc(o[0])}">${esc(o[1])}</option>`:`<option>${esc(o)}</option>`).join("")}</select>`;
+  if(f[1]=="area")return `<label>${esc(l)}</label><textarea id="${id}" rows="4"></textarea>`;
+  const ty=f[1]=="num"?'number" step="any':f[1];return `<label>${esc(l)}</label><input id="${id}" type="${ty}" ${f[1]=="time"?`value="${new Date().toTimeString().slice(0,5)}"`:""}>`}).join("")}
+ <button id="gd">Guardar</button></div>`;
+ app.querySelectorAll("[data-t]").forEach(b=>b.onclick=()=>{tipo=b.dataset.t;vReg()});
+ $("#gd").onclick=async()=>{
+  const d={};CAMPOS[tipo].f.forEach(f=>{let v=$("#f_"+f[0]).value;if(v==="")return;d[f[0]]=f[1]=="num"?Number(v):v});
+  if(!Object.keys(d).filter(k=>k!="hora").length){msg="Rellena al menos un campo.";pintar();return}
+  const {error}=await db.from("entradas").insert({fecha:$("#fecha").value,autor:quien,tipo,datos:d});
+  if(error){msg="No se pudo guardar: "+error.message;pintar();return}
+  msg="";vista="hoy";await cargar();
+ };
+}
+function barras(tit,vals,labs,col){
+ const m=Math.max(1,...vals),w=600,h=120,bw=w/vals.length;
+ return `<h2>${tit}</h2><svg viewBox="0 0 ${w} ${h+22}">`+vals.map((v,i)=>`<rect x="${i*bw+8}" y="${h-v/m*(h-14)}" width="${bw-16}" height="${v/m*(h-14)}" fill="${col}"/><text x="${i*bw+bw/2}" y="${h-v/m*(h-14)-3}" text-anchor="middle" font-size="12" fill="currentColor">${v||""}</text><text x="${i*bw+bw/2}" y="${h+14}" text-anchor="middle" font-size="11" fill="currentColor">${labs[i]}</text>`).join("")+"</svg>";
+}
+function vSem(){
+ const dias=[...Array(7)].map((_,i)=>{const d=new Date();d.setDate(d.getDate()-6+i);return iso(d)});
+ const por=d=>datos.filter(e=>e.fecha==d), g=(es,t)=>es.filter(e=>e.tipo==t).map(e=>e.datos||{});
+ const R=dias.map(d=>{const es=por(d),s=g(es,"sintomas"),c=g(es,"comida"),st=g(es,"estado");
+  const vom=s.reduce((a,x)=>a+(x.vomitos||0),0), hm=Math.max(0,...s.map(x=>Number(x.heces)||0));
+  const dia=s.reduce((a,x)=>a+(x.diarrea_episodios||0),0);
+  const ap=c.some(x=>x.apetito=="Menor de lo habitual"), alt=st.some(x=>x.energia!="Normal"||x.comportamiento!="Como siempre"||x.actividad!="Normal"||x.aseo!="Como siempre");
+  return{d,vom,hm,blanda:hm>=4||dia>0,ap,alt,n:es.length};});
+ const pesos=datos.filter(e=>e.tipo=="peso"&&e.datos?.kg!=null);
+ const act=pesos.filter(e=>e.fecha>=dias[0]).pop(), ant=pesos.filter(e=>e.fecha<dias[0]).pop();
+ const prodsSem=new Set(datos.filter(e=>e.tipo=="comida"&&e.fecha>=dias[0]).map(e=>e.datos?.producto).filter(Boolean));
+ const prodsAnt=new Set(datos.filter(e=>e.tipo=="comida"&&e.fecha<dias[0]).map(e=>e.datos?.producto).filter(Boolean));
+ const nuevos=[...prodsSem].filter(p=>!prodsAnt.has(p));
+ const meds=datos.filter(e=>e.tipo=="medicacion"&&e.fecha>=dias[0]&&e.datos?.cambio);
+ const notas=datos.filter(e=>e.tipo=="nota"&&e.fecha>=dias[0]);
+ const peores=R.map(r=>({...r,p:r.vom+(r.blanda?1:0)+(r.ap?1:0)+(r.alt?1:0)})).filter(r=>r.p>0).sort((a,b)=>b.p-a.p);
+ const dif=act&&ant?(act.datos.kg-ant.datos.kg):null;
+ const lab=dias.map(d=>d.slice(8)+"/"+d.slice(5,7));
+ $("#v").innerHTML=`<h2>Resumen: ${dias[0]} a ${dias[6]}</h2><div class="c"><table>
+ <tr><td>Peso actual</td><td>${act?act.datos.kg+" kg ("+act.fecha+")":"sin registro esta semana"}</td></tr>
+ <tr><td>Peso anterior registrado</td><td>${ant?ant.datos.kg+" kg ("+ant.fecha+")":"—"}</td></tr>
+ <tr><td>Variación</td><td>${dif==null?"—":(dif>0?"+":"")+dif.toFixed(2)+" kg"}</td></tr>
+ <tr><td>Total de vómitos</td><td>${R.reduce((a,r)=>a+r.vom,0)}</td></tr>
+ <tr><td>Días con heces blandas o diarrea (≥4)</td><td>${R.filter(r=>r.blanda).length}</td></tr>
+ <tr><td>Días con apetito reducido</td><td>${R.filter(r=>r.ap).length}</td></tr>
+ <tr><td>Días con estado general alterado</td><td>${R.filter(r=>r.alt).length}</td></tr>
+ <tr><td>Productos nuevos esta semana</td><td>${nuevos.length?esc(nuevos.join(", ")):"ninguno"}</td></tr>
+ <tr><td>Cambios de medicación</td><td>${meds.length?esc(meds.map(m=>m.fecha+": "+(m.datos.medicamento||"")+" "+m.datos.cambio).join("; ")):"ninguno"}</td></tr>
+ <tr><td>Días peores (por nº de alteraciones)</td><td>${peores.length?peores.map(r=>r.d+" ("+r.p+")").join(", "):"ninguno"}</td></tr></table></div>
+ <div class="c">${barras("Vómitos por día",R.map(r=>r.vom),lab,"#c0392b")}${barras("Heces: valor máximo del día (1-6)",R.map(r=>r.hm),lab,"#b9770e")}
+ ${pesos.length>1?`<h2>Evolución del peso (kg)</h2>${linea(pesos.slice(-12))}`:""}</div>
+ <div class="c"><b>Notas y dudas para el veterinario</b>${notas.length?"<br>"+notas.map(n=>`<p>${esc(n.fecha)} · ${esc(n.autor)}: ${esc(n.datos.texto)}</p>`).join(""):'<p class="m">Sin notas.</p>'}</div>
+ <p class="m">Resumen descriptivo de los datos anotados; no es una valoración médica. Comentadlo con el veterinario.</p>`;
+}
+function linea(p){const v=p.map(e=>e.datos.kg),mn=Math.min(...v),mx=Math.max(...v),r=(mx-mn)||1,w=600,h=120;
+ const pt=v.map((x,i)=>[20+i*(w-40)/Math.max(1,v.length-1),h-10-(x-mn)/r*(h-30)]);
+ return `<svg viewBox="0 0 ${w} ${h+20}"><polyline fill="none" stroke="#2f6f5e" stroke-width="2" points="${pt.map(q=>q.join(",")).join(" ")}"/>`+pt.map((q,i)=>`<circle cx="${q[0]}" cy="${q[1]}" r="3" fill="#2f6f5e"/><text x="${q[0]}" y="${q[1]-8}" text-anchor="middle" font-size="11" fill="currentColor">${v[i]}</text><text x="${q[0]}" y="${h+14}" text-anchor="middle" font-size="10" fill="currentColor">${p[i].fecha.slice(5)}</text>`).join("")+"</svg>";}
+
+if(!SUPABASE_URL.startsWith("PEGA")){db=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);db.auth.getSession().then(({data})=>{sesion=!!(data&&data.session);if(sesion)cargar();else pintar()});setInterval(cargar,30000)}else pintar();
+</script></body></html>
