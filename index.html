@@ -15,6 +15,9 @@ input,select,textarea{font:inherit;width:100%;padding:9px;margin:2px 0 8px;borde
 label{font-size:13px;color:var(--mu)}.t{display:flex;gap:4px}.t button{flex:1;margin:0;padding:10px 4px;font-size:15px}#tabs button{flex:1 1 30%}
 .m{color:var(--mu);font-size:13px}.e{color:#c0392b}table{width:100%;border-collapse:collapse}td{padding:4px;border-bottom:1px solid var(--bd);font-size:14px}
 svg{width:100%;height:auto}
+.k-comida{--k:224,138,30}.k-agua{--k:59,130,196}.k-orina{--k:22,163,163}.k-sintomas{--k:214,69,69}.k-estado{--k:142,91,208}.k-medicacion{--k:58,166,85}.k-peso{--k:138,122,92}.k-nota{--k:140,140,140}
+tr[class^=k-]{background:rgba(var(--k),.13)}tr[class^=k-] td:first-child{border-left:6px solid rgb(var(--k))}
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:12px;margin:2px 8px 2px 0}.chip i{width:10px;height:10px;border-radius:50%;background:rgb(var(--k))}
 .solo-print{display:none}
 @media print{
 :root{--bg:#fff;--fg:#000;--card:#fff;--bd:#ccc;--mu:#444;--pat:none}
@@ -162,7 +165,7 @@ function resumenEntrada(e){const d=e.datos||{};return Object.entries(d).filter((
 function vHoy(){
  const hk=e=>(e.datos?.hora||"99:99")+"|"+(e.created_at||"");
  const h=datos.filter(e=>e.fecha==diaSel).sort((a,b)=>hk(a).localeCompare(hk(b)));
- $("#v").innerHTML=`<div style="display:flex;gap:6px;align-items:center"><button class="s" id="dp">◀</button><input type="date" id="dsel" value="${diaSel}" style="margin:0"><button class="s" id="dn">▶</button></div><h2>${diaSel==hoy()?"Hoy":"Día"} (${diaSel})</h2>${diaSel==hoy()?panelHoy():""}`+(h.length?`<div class="c"><table>${h.map(e=>`<tr><td><b>${esc(e.datos?.hora||"")} ${CAMPOS[e.tipo].t}</b><br><span class="m">${esc(e.autor)}</span></td><td>${esc(resumenEntrada(e))}${e.autor===quien?`<br><button class="s" data-ed="${e.id}">Editar</button>`:""}</td></tr>`).join("")}</table></div>`:'<div class="c m">No hay registros este día.</div>');
+ $("#v").innerHTML=`<div style="display:flex;gap:6px;align-items:center"><button class="s" id="dp">◀</button><input type="date" id="dsel" value="${diaSel}" style="margin:0"><button class="s" id="dn">▶</button></div><h2>${diaSel==hoy()?"Hoy":"Día"} (${diaSel})</h2>${diaSel==hoy()?panelHoy():""}<div class="noprint">${Object.entries(CAMPOS).map(([k,c])=>`<span class="chip k-${k}"><i></i>${c.t}</span>`).join("")}</div>`+(h.length?`<div class="c"><table>${h.map(e=>`<tr class="k-${e.tipo}"><td><b>${esc(e.datos?.hora||"")} ${CAMPOS[e.tipo].t}</b><br><span class="m">${esc(e.autor)}</span></td><td>${esc(resumenEntrada(e))}${e.autor===quien?`<br><button class="s" data-ed="${e.id}">Editar</button>`:""}</td></tr>`).join("")}</table></div>`:'<div class="c m">No hay registros este día.</div>');
  const mv=n=>{const d=new Date(diaSel+"T12:00:00");d.setDate(d.getDate()+n);diaSel=iso(d);vHoy()};
  $("#dp").onclick=()=>mv(-1);$("#dn").onclick=()=>mv(1);
  $("#dsel").onchange=()=>{if($("#dsel").value){diaSel=$("#dsel").value;vHoy()}};
