@@ -3,6 +3,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Diario IBD</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/barcode-detector@3.1.3/dist/iife/index.min.js"></script>
 <style>
 :root{--bg:#fafaf7;--fg:#222;--card:#fff;--ac:#2f6f5e;--mu:#777;--bd:#ddd;--pat:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22200%22 viewBox=%220 0 200 200%22 fill=%22none%22 stroke=%22%232f6f5e%22 stroke-width=%221.4%22 stroke-linejoin=%22round%22 opacity=%220.22%22%3E%0A%3Cpath d=%22M28 14L31 25L42 28L31 31L28 42L25 31L14 28L25 25Z%22 fill=%22%232f6f5e%22 stroke=%22none%22/%3E%0A%3Cpath d=%22M150 70L152 77L159 79L152 81L150 88L148 81L141 79L148 77Z%22 fill=%22%232f6f5e%22 stroke=%22none%22/%3E%0A%3Ccircle cx=%22118%22 cy=%2226%22 r=%221.8%22 fill=%22%232f6f5e%22 stroke=%22none%22/%3E%3Ccircle cx=%2270%22 cy=%2296%22 r=%221.8%22 fill=%22%232f6f5e%22 stroke=%22none%22/%3E%3Ccircle cx=%22176%22 cy=%22150%22 r=%221.8%22 fill=%22%232f6f5e%22 stroke=%22none%22/%3E%3Ccircle cx=%2220%22 cy=%22120%22 r=%221.8%22 fill=%22%232f6f5e%22 stroke=%22none%22/%3E%0A%3Cpath d=%22M84 160L86 142L96 150Q104 148 112 150L122 142L124 160Q124 176 104 176Q84 176 84 160Z%22/%3E%0A%3Cpath d=%22M150 22L151 12L157 17Q161 16 165 17L171 12L172 22Q172 31 161 31Q150 31 150 22Z%22 transform=%22translate%28-4 4%29%22/%3E%0A%3C/svg%3E")}
 @media(prefers-color-scheme:dark){:root{--bg:#1b1c1b;--fg:#eee;--card:#262827;--ac:#6cc3a8;--mu:#aaa;--bd:#444;--pat:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22200%22 viewBox=%220 0 200 200%22 fill=%22none%22 stroke=%22%23ffffff%22 stroke-width=%221.4%22 stroke-linejoin=%22round%22 opacity=%220.22%22%3E%0A%3Cpath d=%22M28 14L31 25L42 28L31 31L28 42L25 31L14 28L25 25Z%22 fill=%22%23ffffff%22 stroke=%22none%22/%3E%0A%3Cpath d=%22M150 70L152 77L159 79L152 81L150 88L148 81L141 79L148 77Z%22 fill=%22%23ffffff%22 stroke=%22none%22/%3E%0A%3Ccircle cx=%22118%22 cy=%2226%22 r=%221.8%22 fill=%22%23ffffff%22 stroke=%22none%22/%3E%3Ccircle cx=%2270%22 cy=%2296%22 r=%221.8%22 fill=%22%23ffffff%22 stroke=%22none%22/%3E%3Ccircle cx=%22176%22 cy=%22150%22 r=%221.8%22 fill=%22%23ffffff%22 stroke=%22none%22/%3E%3Ccircle cx=%2220%22 cy=%22120%22 r=%221.8%22 fill=%22%23ffffff%22 stroke=%22none%22/%3E%0A%3Cpath d=%22M84 160L86 142L96 150Q104 148 112 150L122 142L124 160Q124 176 104 176Q84 176 84 160Z%22/%3E%0A%3Cpath d=%22M150 22L151 12L157 17Q161 16 165 17L171 12L172 22Q172 31 161 31Q150 31 150 22Z%22 transform=%22translate%28-4 4%29%22/%3E%0A%3C/svg%3E")}}
@@ -19,6 +20,7 @@ svg{width:100%;height:auto}
 tr[class^=k-]{background:rgba(var(--k),.13)}tr[class^=k-] td:first-child{border-left:6px solid rgb(var(--k))}
 .chip{display:inline-flex;align-items:center;gap:4px;font-size:12px;margin:2px 8px 2px 0}.chip i{width:10px;height:10px;border-radius:50%;background:rgb(var(--k))}
 .op{display:inline-block;padding:6px 11px;margin:3px 4px 3px 0;border:1px solid var(--bd);border-radius:16px;cursor:pointer;font-size:14px}.op.on{background:var(--ac);color:#fff;border-color:var(--ac)}
+.scan{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:50;display:flex;align-items:center;justify-content:center;padding:12px}.scan .c{max-width:420px;width:100%;max-height:92vh;overflow:auto}
 .solo-print{display:none}
 @media print{
 :root{--bg:#fff;--fg:#000;--card:#fff;--bd:#ccc;--mu:#444;--pat:none}
@@ -30,6 +32,7 @@ body{background:#fff;max-width:none;padding:0}
 </style></head><body>
 <h1>🐱 Diario IBD</h1>
 <div id="app"></div>
+<p class="m noprint" style="margin-top:22px;font-size:12px">Datos de productos escaneados: Open Pet Food Facts y Open Food Facts (licencia ODbL).</p>
 <script>
 // ===== CONFIGURACIÓN (rellenar) =====
 const SUPABASE_URL = "https://nysjyikjownvyeplqzsz.supabase.co";
@@ -51,7 +54,7 @@ const $=s=>document.querySelector(s), app=$("#app");
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const iso=d=>{const z=new Date(d);return z.getFullYear()+"-"+String(z.getMonth()+1).padStart(2,"0")+"-"+String(z.getDate()).padStart(2,"0")};
 const hoy=()=>iso(new Date());
-let db=null, sesion=false, alimentos=[], editId=null, medicinas=[], editMedId=null, editEntId=null, plantilla=null, diaSel=hoy(), mesSel=hoy().slice(0,7), datos=[], quien=localStorage.getItem("quien"), vista="hoy", tipo="comida", msg="";
+let db=null, sesion=false, alimentos=[], editId=null, medicinas=[], editMedId=null, editEntId=null, plantilla=null, pendCB=null, pendCBm=null, diaSel=hoy(), mesSel=hoy().slice(0,7), datos=[], quien=localStorage.getItem("quien"), vista="hoy", tipo="comida", msg="";
 const lbl=(k)=>k[3]||(k[1]=="text"||k[1]=="num"||k[1]=="area"?k[2]:k[0]);
 
 function login(){
@@ -87,7 +90,7 @@ function estadoAli(a){const h=hoy();
  if(a.fecha_inicio>h)return "Empieza el "+a.fecha_inicio;
  return a.fecha_inicio>=dAdd(-14)?"Reciente · Últimas dos semanas":"Habitual"}
 function selAlim(){const act=alimentos.filter(a=>!(a.fecha_fin&&a.fecha_fin<hoy()));
- return `<label>Producto guardado</label><select id="alim"><option value="">Otro / escribir a mano</option>${act.map(a=>`<option value="${a.id}">${esc(nom(a))}</option>`).join("")}</select>`}
+ return `<label>Producto guardado</label><div style="display:flex;gap:6px"><select id="alim" style="flex:1"><option value="">Otro / escribir a mano</option>${act.map(a=>`<option value="${a.id}">${esc(nom(a))}</option>`).join("")}</select><button class="s" id="alim_sc" style="margin:2px 0 8px">📷</button></div>`}
 function vAli(){
  const e=alimentos.find(a=>a.id==editId)||{};
  const ord=[...alimentos].sort((a,b)=>(b.fecha_inicio||"").localeCompare(a.fecha_inicio||""));
@@ -97,16 +100,18 @@ function vAli(){
  <label>Tipo de alimento</label><select id="a_tipo">${["Húmeda","Pienso","Premio","Suplemento","Otro"].map(o=>`<option${e.tipo==o?" selected":""}>${o}</option>`).join("")}</select>
  <label>Ingredientes completos (como en la etiqueta)</label><textarea id="a_ing" rows="4">${esc(e.ingredientes)}</textarea>
  <label>Fuentes de proteína animal (separadas por comas)</label><input id="a_prot" value="${esc(e.proteinas)}">
+ <label>Código de barras (opcional)</label><div style="display:flex;gap:6px"><input id="a_cb" inputmode="numeric" value="${esc(e.codigo_barras)}" style="flex:1"><button class="s" id="a_sc" style="margin:2px 0 8px">📷 Escanear</button></div><div class="m" id="a_st"></div>
  <label>Ración habitual (g, opcional)</label><input id="a_rg" type="number" step="any" min="0" value="${esc(e.racion_g)}">
  <label>Ración habitual (ml, opcional)</label><input id="a_rml" type="number" step="any" min="0" value="${esc(e.racion_ml)}">
  <label>Fecha de inicio de uso (opcional)</label><input id="a_ini" type="date" value="${esc(e.fecha_inicio||"")}">
  <label>Fecha de fin de uso (opcional; vacía si sigue en uso)</label><input id="a_fin" type="date" value="${esc(e.fecha_fin||"")}">
  <button id="a_gd">${editId?"Guardar cambios":"Guardar producto"}</button>${editId?'<button class="s" id="a_cn">Cancelar</button>':""}</div>
- <h2>Productos guardados</h2>`+(ord.length?ord.map(a=>`<div class="c"><b>${esc(nom(a))}</b> <span class="m">(${esc(a.tipo)})</span><br><span class="m">${esc(estadoAli(a))}${a.fecha_inicio?" · desde "+esc(a.fecha_inicio):""}</span>
+ <h2>Productos guardados</h2>`+(ord.length?ord.map(a=>`<div class="c"><b>${esc(nom(a))}</b> <span class="m">(${esc(a.tipo)})</span><br><span class="m">${esc(estadoAli(a))}${a.fecha_inicio?" · desde "+esc(a.fecha_inicio):""}${a.codigo_barras?" · Código "+esc(a.codigo_barras):""}</span>
  ${a.proteinas?`<div>Proteína animal: ${esc(a.proteinas)}</div>`:""}${a.racion_g!=null||a.racion_ml!=null?`<div>Ración habitual: ${[a.racion_g!=null?a.racion_g+" g":"",a.racion_ml!=null?a.racion_ml+" ml":""].filter(Boolean).join(" · ")}</div>`:""}${a.ingredientes?`<details><summary class="m">Ingredientes</summary>${esc(a.ingredientes)}</details>`:""}
  <button class="s" data-e="${a.id}">Editar</button>${!a.fecha_fin?`<button class="s" data-f="${a.id}">Dejar de usar (hoy)</button>`:""}</div>`).join(""):'<div class="c m">Aún no hay productos guardados.</div>');
  $("#a_gd").onclick=async()=>{
   const r={marca:$("#a_marca").value.trim(),nombre:$("#a_nombre").value.trim(),tipo:$("#a_tipo").value,ingredientes:$("#a_ing").value.trim(),proteinas:$("#a_prot").value.trim(),fecha_inicio:$("#a_ini").value||null,fecha_fin:$("#a_fin").value||null};
+  const cb=$("#a_cb").value.trim();if(cb)r.codigo_barras=cb;else if(e.codigo_barras)r.codigo_barras=null;
   const rg=$("#a_rg").value,rml=$("#a_rml").value;if(rg!=="")r.racion_g=Number(rg);else if(e.racion_g!=null)r.racion_g=null;if(rml!=="")r.racion_ml=Number(rml);else if(e.racion_ml!=null)r.racion_ml=null;
   if(!r.marca&&!r.nombre){alert("Indica al menos la marca o el nombre del producto.");return}
   const q=editId?db.from("alimentos").update(r).eq("id",editId):db.from("alimentos").insert({...r,autor:quien});
@@ -115,11 +120,13 @@ function vAli(){
   editId=null;msg="";await cargar(true);
  };
  if($("#a_cn"))$("#a_cn").onclick=()=>{editId=null;vAli()};
+ $("#a_sc").onclick=()=>escanear(procesarAli);if(pendCB){const c=pendCB;pendCB=null;procesarAli(c)}
  app.querySelectorAll("[data-e]").forEach(b=>b.onclick=()=>{editId=Number(b.dataset.e);vAli();window.scrollTo(0,0)});
  app.querySelectorAll("[data-f]").forEach(b=>b.onclick=async()=>{if(!confirm("¿Marcar este producto como finalizado hoy?"))return;const {error}=await db.from("alimentos").update({fecha_fin:hoy()}).eq("id",Number(b.dataset.f));if(error){alert("No se pudo actualizar: "+error.message);return}await cargar(true)});
 }
 function activo(x,h){return !(x.fecha_fin&&x.fecha_fin<h)&&!(x.fecha_inicio&&x.fecha_inicio>h)}
 const VENT={comida:60,medicacion:120};
+const DIAS=["lun","mar","mié","jue","vie","sáb","dom"],NOMDIA=["dom","lun","mar","mié","jue","vie","sáb"],DIASL=["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
 const mins=h=>{const [a,b]=String(h||"").split(":").map(Number);return isNaN(a)||isNaN(b)?null:a*60+b};
 function duplicado(t,fe,d){
  if(!VENT[t]||mins(d.hora)==null)return null;
@@ -133,12 +140,20 @@ function panelHoy(){
  const sm=k=>Math.round(es.filter(e=>e.tipo=="comida").reduce((a,e)=>a+(Number(e.datos?.[k])||0),0)*10)/10;
  const gTxt=(sm("gramos")||sm("gramos_comidos")||sm("ml")||sm("ml_comidos"))?`Hoy: ${sm("gramos")} g ofrecidos · ${sm("gramos_comidos")} g comidos · ${sm("ml")} ml ofrecidos · ${sm("ml_comidos")} ml comidos<br>`:"";
  const aguaHoy=Math.round(es.filter(e=>e.tipo=="agua").reduce((a,e)=>a+(Number(e.datos?.ml)||0),0)*10)/10;
- const pautas=medicinas.filter(m=>activo(m,h)&&m.horas).map(m=>{const tot=m.horas.split(",").filter(x=>x.trim()).length,dadas=es.filter(e=>e.tipo=="medicacion"&&e.datos?.medicamento_id==m.id).length;return esc(m.nombre)+": "+dadas+" de "+tot+" tomas ("+esc(m.horas)+")"});
+ const pautas=medicinas.filter(m=>activo(m,h)&&(m.horas||m.frecuencia=="semanal")).map(m=>{
+  if(m.frecuencia=="semanal"){
+   const ds=(m.dias_semana||"").split(",").map(x=>x.trim()).filter(Boolean);if(!ds.length)return null;
+   let ld=null;for(let k=0;k<7&&!ld;k++){const d=new Date(h+"T12:00:00");d.setDate(d.getDate()-k);if(ds.includes(NOMDIA[d.getDay()]))ld=iso(d)}
+   if(!ld||(m.fecha_inicio&&ld<m.fecha_inicio)||(m.created_at||"").slice(0,10)>ld)return null;
+   const dada=datos.some(e=>e.tipo=="medicacion"&&e.datos?.medicamento_id==m.id&&e.fecha>=ld);
+   if(ld==h)return dada?"✓ "+esc(m.nombre)+": toma semanal de hoy ya anotada":"<b>Hoy toca "+esc(m.nombre)+"</b>"+(m.horas?" ("+esc(m.horas)+")":"")+" · pendiente";
+   return dada?null:"<b>"+esc(m.nombre)+"</b>: tocaba el "+DIASL[new Date(ld+"T12:00:00").getDay()]+" ("+ld+") y no consta anotada"}
+  const tot=m.horas.split(",").filter(x=>x.trim()).length,dadas=es.filter(e=>e.tipo=="medicacion"&&e.datos?.medicamento_id==m.id).length;return esc(m.nombre)+": "+dadas+" de "+tot+" tomas ("+esc(m.horas)+")"}).filter(Boolean);
  const pes=datos.filter(e=>e.tipo=="peso"&&e.datos?.kg!=null).pop();
  const dp=pes?Math.floor((new Date(h+"T12:00:00")-new Date(pes.fecha+"T12:00:00"))/864e5):null;
  const pesoTxt=pes?`Último peso: ${pes.datos.kg} kg (hace ${dp} ${dp==1?"día":"días"})${dp>=7?" · <b>toca registrar el peso</b>":""}`:"<b>Aún no hay peso registrado</b>";
- return `<div class="c"><b>Estado de hoy</b><br>Comidas: ${nCom} · Última: ${ult("comida")}<br>${gTxt}${aguaHoy?`Agua hoy: ${aguaHoy} ml<br>`:""}Última medicación: ${ult("medicacion")}<br>Vómitos hoy: ${vom}${pautas.length?"<br>Pautas: "+pautas.join(" · "):""}<br>${pesoTxt}</div>`}
-function selMed(){const act=medicinas.filter(m=>activo(m,hoy()));return `<label>Medicamento guardado</label><select id="medsel"><option value="">Otro / escribir a mano</option>${act.map(m=>`<option value="${m.id}">${esc(m.nombre)}${m.dosis?" · "+esc(m.dosis):""}</option>`).join("")}</select>`}
+ return `<div class="c"><b>Estado de hoy</b><br>Comidas: ${nCom} · Última: ${ult("comida")}<br>${gTxt}${aguaHoy?`Agua hoy: ${aguaHoy} ml<br>`:""}Última medicación: ${ult("medicacion")}<br>Vómitos hoy: ${vom}${pautas.length?"<br>Pautas:<br>"+pautas.join("<br>"):""}<br>${pesoTxt}</div>`}
+function selMed(){const act=medicinas.filter(m=>activo(m,hoy()));return `<label>Medicamento guardado</label><div style="display:flex;gap:6px"><select id="medsel" style="flex:1"><option value="">Otro / escribir a mano</option>${act.map(m=>`<option value="${m.id}">${esc(m.nombre)}${m.dosis?" · "+esc(m.dosis):""}</option>`).join("")}</select><button class="s" id="medsel_sc" style="margin:2px 0 8px">📷</button></div>`}
 function estadoMed(m){const h=hoy();return m.fecha_fin&&m.fecha_fin<h?"Finalizado ("+m.fecha_fin+")":m.fecha_inicio&&m.fecha_inicio>h?"Empieza el "+m.fecha_inicio:"En uso"}
 function vMed(){
  const e=medicinas.find(a=>a.id==editMedId)||{};
@@ -146,27 +161,72 @@ function vMed(){
  $("#v").innerHTML=`<div class="c"><h2>${editMedId?"Editar medicamento":"Nuevo medicamento"}</h2>
  <label>Nombre exacto</label><input id="m_nom" value="${esc(e.nombre)}">
  <label>Dosis pautada por el veterinario</label><input id="m_dos" value="${esc(e.dosis)}">
+ <label>Frecuencia</label><select id="m_fr"><option value="diaria"${e.frecuencia!="semanal"?" selected":""}>Diaria</option><option value="semanal"${e.frecuencia=="semanal"?" selected":""}>Semanal (días concretos)</option></select>
+ <label>Días de la semana (solo si es semanal)</label><div id="m_dias">${DIAS.map(n=>`<span class="op${(e.dias_semana||"").split(",").map(x=>x.trim()).includes(n)?" on":""}" data-o="${n}">${n}</span>`).join("")}</div>
  <label>Horas de toma (separadas por comas, ej. 08:00, 20:00)</label><input id="m_hor" value="${esc(e.horas)}">
  <label>Notas (cómo se administra, etc.)</label><input id="m_not" value="${esc(e.notas)}">
+ <label>Código de barras (opcional)</label><div style="display:flex;gap:6px"><input id="m_cb" inputmode="numeric" value="${esc(e.codigo_barras)}" style="flex:1"><button class="s" id="m_sc" style="margin:2px 0 8px">📷 Escanear</button></div><div class="m" id="m_st"></div>
  <label>Fecha de inicio (opcional)</label><input id="m_ini" type="date" value="${esc(e.fecha_inicio||"")}">
  <label>Fecha de fin (opcional; vacía si sigue)</label><input id="m_fin" type="date" value="${esc(e.fecha_fin||"")}">
  <button id="m_gd">${editMedId?"Guardar cambios":"Guardar medicamento"}</button>${editMedId?'<button class="s" id="m_cn">Cancelar</button>':""}</div>
- <h2>Medicamentos guardados</h2>`+(ord.length?ord.map(m=>`<div class="c"><b>${esc(m.nombre)}</b>${m.dosis?" · "+esc(m.dosis):""}<br><span class="m">${esc(estadoMed(m))}${m.horas?" · Horas: "+esc(m.horas):""}</span>${m.notas?`<div>${esc(m.notas)}</div>`:""}
+ <h2>Medicamentos guardados</h2>`+(ord.length?ord.map(m=>`<div class="c"><b>${esc(m.nombre)}</b>${m.dosis?" · "+esc(m.dosis):""}<br><span class="m">${esc(estadoMed(m))}${m.frecuencia=="semanal"?" · Semanal: "+esc(m.dias_semana||""):""}${m.horas?" · Horas: "+esc(m.horas):""}${m.codigo_barras?" · Código "+esc(m.codigo_barras):""}</span>${m.notas?`<div>${esc(m.notas)}</div>`:""}
  <button class="s" data-me="${m.id}">Editar</button>${!m.fecha_fin?`<button class="s" data-mf="${m.id}">Dejar de usar (hoy)</button>`:""}</div>`).join(""):'<div class="c m">Aún no hay medicamentos guardados.</div>');
  $("#m_gd").onclick=async()=>{
   const r={nombre:$("#m_nom").value.trim(),dosis:$("#m_dos").value.trim(),horas:$("#m_hor").value.trim(),notas:$("#m_not").value.trim(),fecha_inicio:$("#m_ini").value||null,fecha_fin:$("#m_fin").value||null};
+  const fr=$("#m_fr").value,dsel=[...app.querySelectorAll("#m_dias .op.on")].map(x=>x.dataset.o).join(", ");
+  if(fr=="semanal"){if(!dsel){alert("Elige al menos un día de la semana.");return}r.frecuencia="semanal";r.dias_semana=dsel}else if(e.frecuencia){r.frecuencia="diaria";r.dias_semana=null}
+  const cb=$("#m_cb").value.trim();if(cb)r.codigo_barras=cb;else if(e.codigo_barras)r.codigo_barras=null;
   if(!r.nombre){alert("Indica el nombre del medicamento.");return}
   const {error}=await (editMedId?db.from("medicamentos").update(r).eq("id",editMedId):db.from("medicamentos").insert({...r,autor:quien}));
   if(error){alert("No se pudo guardar el medicamento: "+error.message);return}
   editMedId=null;await cargar(true);
  };
  if($("#m_cn"))$("#m_cn").onclick=()=>{editMedId=null;vMed()};
+ app.querySelectorAll("#m_dias .op").forEach(o=>o.onclick=()=>o.classList.toggle("on"));
+ $("#m_sc").onclick=()=>escanear(procesarMed);if(pendCBm){const c=pendCBm;pendCBm=null;procesarMed(c)}
  app.querySelectorAll("[data-me]").forEach(b=>b.onclick=()=>{editMedId=Number(b.dataset.me);vMed();window.scrollTo(0,0)});
  app.querySelectorAll("[data-mf]").forEach(b=>b.onclick=async()=>{if(!confirm("¿Marcar este medicamento como finalizado hoy?"))return;const {error}=await db.from("medicamentos").update({fecha_fin:hoy()}).eq("id",Number(b.dataset.mf));if(error){alert("No se pudo actualizar: "+error.message);return}await cargar(true)});
 }
 function descargar(nombre,filas){const q=v=>'"'+String(v??"").replace(/"/g,'""')+'"';const t="\ufeff"+filas.map(r=>r.map(q).join(";")).join("\r\n");const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([t],{type:"text/csv;charset=utf-8"}));a.download=nombre;document.body.appendChild(a);a.click();a.remove()}
 function csvRegistros(){const ks=[...new Set(datos.flatMap(e=>Object.keys(e.datos||{}).filter(k=>k!="hora")))];return [["fecha","hora","autor","tipo",...ks],...datos.map(e=>[e.fecha,e.datos?.hora||"",e.autor,e.tipo,...ks.map(k=>(e.datos||{})[k]??"")])]}
 function csvTabla(arr,cols){return [cols,...arr.map(x=>cols.map(c=>x[c]??""))]}
+function escanear(cb){
+ const ov=document.createElement("div");ov.className="scan";
+ ov.innerHTML='<div class="c"><b>Escanear código de barras</b><video id="sv" playsinline muted style="width:100%;border-radius:8px;background:#000;margin-top:6px"></video><div class="m" id="ss">Iniciando cámara…</div><label>O escribe el código</label><input id="sc" inputmode="numeric"><button id="sok">Usar este código</button><button class="s" id="sno">Cancelar</button></div>';
+ document.body.appendChild(ov);
+ let parar=false,stream=null;
+ const cerrar=()=>{parar=true;if(stream)stream.getTracks().forEach(t=>t.stop());ov.remove()};
+ const fin=c=>{c=String(c||"").replace(/\D/g,"");if(!c)return;cerrar();cb(c)};
+ ov.querySelector("#sno").onclick=cerrar;ov.querySelector("#sok").onclick=()=>fin(ov.querySelector("#sc").value);
+ (async()=>{try{
+  if(!navigator.mediaDevices||!window.BarcodeDetector)throw new Error("este navegador no lo permite");
+  const det=new BarcodeDetector({formats:["ean_13","ean_8","upc_a","upc_e"]});
+  stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}});
+  const v=ov.querySelector("#sv");v.srcObject=stream;await v.play();ov.querySelector("#ss").textContent="Apunta al código de barras…";
+  const bucle=async()=>{if(parar)return;try{const r=await det.detect(v);if(r.length){fin(r[0].rawValue);return}}catch(e){}setTimeout(bucle,250)};bucle();
+ }catch(e){ov.querySelector("#ss").textContent="No se pudo usar la cámara ("+(e.message||e)+"). Puedes escribir el código a mano."}})();
+}
+async function buscarOnline(code){
+ const campos="product_name,brands,ingredients_text,ingredients_text_es,quantity";
+ for(const url of ["https://world.openpetfoodfacts.org/api/v2/product/"+code+".json?fields="+campos,"https://world.openfoodfacts.org/api/v3/product/"+code+"?product_type=all&fields="+campos]){
+  try{const r=await fetch(url);if(!r.ok)continue;const j=await r.json(),p=j.product;
+   if(p&&(p.product_name||p.brands))return{nombre:p.product_name||"",marca:(p.brands||"").split(",")[0].trim(),ingredientes:p.ingredients_text_es||p.ingredients_text||""}}catch(e){}}
+ return null}
+async function procesarAli(code){
+ $("#a_cb").value=code;
+ const ya=alimentos.find(a=>a.codigo_barras==code);
+ if(ya&&ya.id!=editId){if(confirm("Este código ya está guardado como «"+nom(ya)+"». ¿Editarlo?")){editId=ya.id;vAli();window.scrollTo(0,0)}return}
+ const st=$("#a_st");st.textContent="Buscando en Open Pet Food Facts y Open Food Facts…";
+ const r=await buscarOnline(code);
+ if(!$("#a_st"))return;
+ if(!r){$("#a_st").textContent="No se ha encontrado en la base online (o no se ha podido consultar). Rellénalo a mano: el código quedará guardado.";return}
+ if(!$("#a_marca").value)$("#a_marca").value=r.marca;if(!$("#a_nombre").value)$("#a_nombre").value=r.nombre;if(!$("#a_ing").value)$("#a_ing").value=r.ingredientes;
+ $("#a_st").textContent="Encontrado: datos rellenados desde Open Pet Food Facts / Open Food Facts. Revísalos; las proteínas animales no se rellenan solas."}
+function procesarMed(code){
+ $("#m_cb").value=code;
+ const ya=medicinas.find(m=>m.codigo_barras==code);
+ if(ya&&ya.id!=editMedId){if(confirm("Este código ya está guardado como «"+ya.nombre+"». ¿Editarlo?")){editMedId=ya.id;vMed();window.scrollTo(0,0)}return}
+ $("#m_st").textContent="Código anotado. Para medicinas no consulto una base online: escribe el nombre y la dosis a mano; el código quedará guardado para próximas veces."}
 function vis(f,v){if(f&&f[1]=="sel"){const o=f[2].find(o=>Array.isArray(o)&&o[0]==v);if(o)return o[1]}return v}
 const CORTO={producto:"Producto",cantidad:"Cantidad (libre)",gramos:"Gramos ofrecidos",ml:"ml ofrecidos",gramos_comidos:"Gramos comidos",ml_comidos:"ml comidos",comido:"Comido",kg:"Peso (kg)",medicamento:"Medicamento",dosis:"Dosis",cambio:"Cambio",texto:"Nota",factores:"Factores"};
 function resumenEntrada(e){const d=e.datos||{};return Object.entries(d).filter(([k,v])=>v!==""&&v!=null&&k!="alimento_id"&&k!="medicamento_id"&&k!="hora").map(([k,v])=>{const f=CAMPOS[e.tipo].f.find(x=>x[0]==k);return (e.tipo=="agua"&&k=="ml"?"ml bebidos":(CORTO[k]||(f?lbl(f):k)))+": "+vis(f,v)}).join(" · ")}
@@ -194,6 +254,12 @@ function vReg(){
  <button id="gd">${editEntId?"Guardar cambios":"Guardar"}</button>${editEntId?'<button class="s" id="cn">Cancelar</button>':'<button class="s" id="go">Guardar y añadir otro</button>'}</div>`;
  app.querySelectorAll("[data-t]").forEach(b=>b.onclick=()=>{tipo=b.dataset.t;vReg()});
  if($("#alim"))$("#alim").onchange=()=>{const a=alimentos.find(x=>x.id==$("#alim").value);if(!a)return;$("#f_producto").value=((a.marca||"")+" "+(a.nombre||"")).trim();const c=$("#f_clase");c.value=[...c.options].some(o=>o.value==a.tipo)?a.tipo:"Otro";if(a.racion_g!=null)$("#f_gramos").value=a.racion_g;if(a.racion_ml!=null)$("#f_ml").value=a.racion_ml};
+ if($("#alim_sc"))$("#alim_sc").onclick=()=>escanear(c=>{const a=alimentos.find(x=>x.codigo_barras==c);
+  if(a&&[...$("#alim").options].some(o=>o.value==a.id)){$("#alim").value=a.id;$("#alim").onchange();return}
+  if(confirm((a?"Ese producto figura como finalizado en el catálogo.":"Este código no está en vuestro catálogo.")+" ¿Abrir el catálogo para añadirlo o editarlo?")){if(a){editId=a.id}else{editId=null;pendCB=c}vista="ali";pintar()}});
+ if($("#medsel_sc"))$("#medsel_sc").onclick=()=>escanear(c=>{const m=medicinas.find(x=>x.codigo_barras==c);
+  if(m&&[...$("#medsel").options].some(o=>o.value==m.id)){$("#medsel").value=m.id;$("#medsel").onchange();return}
+  if(confirm((m?"Ese medicamento figura como finalizado en el catálogo.":"Este código no está en vuestro catálogo.")+" ¿Abrir el catálogo para añadirlo o editarlo?")){if(m){editMedId=m.id}else{editMedId=null;pendCBm=c}vista="med";pintar()}});
  if($("#medsel"))$("#medsel").onchange=()=>{const m=medicinas.find(x=>x.id==$("#medsel").value);if(!m)return;$("#f_medicamento").value=m.nombre||"";$("#f_dosis").value=m.dosis||""};
  app.querySelectorAll(".op").forEach(o=>o.onclick=()=>o.classList.toggle("on"));
  const ed=editEntId?datos.find(x=>x.id==editEntId):rep;
@@ -294,12 +360,12 @@ function resumen(dias,titulo,nav,prev){
  const aUso=alimentos.filter(a=>!(a.fecha_fin&&a.fecha_fin<i0)&&!(a.fecha_inicio&&a.fecha_inicio>i1)),mUso=medicinas.filter(m=>!(m.fecha_fin&&m.fecha_fin<i0)&&!(m.fecha_inicio&&m.fecha_inicio>i1));
  $("#v").insertAdjacentHTML("beforeend",`<div class="c noprint"><b>Exportar e imprimir</b><br><button id="pr">Imprimir / guardar PDF</button><button class="s" id="x1">CSV: todos los registros</button><button class="s" id="x2">CSV: alimentos</button><button class="s" id="x3">CSV: medicinas</button></div>
  <div class="solo-print"><h2>Alimentos en uso en el periodo</h2>${aUso.length?aUso.map(a=>`<p>${esc(nom(a))} (${esc(a.tipo)})${a.proteinas?" · Proteína: "+esc(a.proteinas):""}${a.fecha_inicio?" · desde "+esc(a.fecha_inicio):""}${a.ingredientes?"<br><small>Ingredientes: "+esc(a.ingredientes)+"</small>":""}</p>`).join(""):"<p>Sin productos guardados.</p>"}
- <h2>Medicación en uso en el periodo</h2>${mUso.length?mUso.map(m=>`<p>${esc(m.nombre)}${m.dosis?" · "+esc(m.dosis):""}${m.horas?" · Horas: "+esc(m.horas):""}${m.notas?" · "+esc(m.notas):""}</p>`).join(""):"<p>Sin medicamentos guardados.</p>"}
+ <h2>Medicación en uso en el periodo</h2>${mUso.length?mUso.map(m=>`<p>${esc(m.nombre)}${m.dosis?" · "+esc(m.dosis):""}${m.frecuencia=="semanal"?" · Semanal: "+esc(m.dias_semana||""):""}${m.horas?" · Horas: "+esc(m.horas):""}${m.notas?" · "+esc(m.notas):""}</p>`).join(""):"<p>Sin medicamentos guardados.</p>"}
  <h2>Detalle de registros</h2><table>${det.map(e=>`<tr><td>${esc(e.fecha)}</td><td>${esc(e.datos?.hora||"")}</td><td>${CAMPOS[e.tipo]?CAMPOS[e.tipo].t:esc(e.tipo)}</td><td>${esc(resumenEntrada(e))}</td><td>${esc(e.autor)}</td></tr>`).join("")}</table></div>`);
  $("#pr").onclick=()=>window.print();
  $("#x1").onclick=()=>descargar("registros.csv",csvRegistros());
- $("#x2").onclick=()=>descargar("alimentos.csv",csvTabla(alimentos,["marca","nombre","tipo","ingredientes","proteinas","racion_g","racion_ml","fecha_inicio","fecha_fin","autor"]));
- $("#x3").onclick=()=>descargar("medicinas.csv",csvTabla(medicinas,["nombre","dosis","horas","notas","fecha_inicio","fecha_fin","autor"]));
+ $("#x2").onclick=()=>descargar("alimentos.csv",csvTabla(alimentos,["marca","nombre","tipo","ingredientes","proteinas","racion_g","racion_ml","codigo_barras","fecha_inicio","fecha_fin","autor"]));
+ $("#x3").onclick=()=>descargar("medicinas.csv",csvTabla(medicinas,["nombre","dosis","frecuencia","dias_semana","horas","notas","codigo_barras","fecha_inicio","fecha_fin","autor"]));
 }
 function linea(p){const v=p.map(e=>e.datos.kg),mn=Math.min(...v),mx=Math.max(...v),r=(mx-mn)||1,w=600,h=120;
  const pt=v.map((x,i)=>[20+i*(w-40)/Math.max(1,v.length-1),h-10-(x-mn)/r*(h-30)]);
